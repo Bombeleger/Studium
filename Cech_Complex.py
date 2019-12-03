@@ -13,8 +13,11 @@ from tabulate import tabulate
 plt.close()
 
 ##### Eingabe #####
+num_samples = 40
 anzahl_punkte_pro_kreis = 4
-epsilon = 2
+epsilon = .1
+radius = .1
+teilkreis = 0
 
 ##### Funktionen #####
 def punkte(xi,yi,radius,samples):    
@@ -36,19 +39,18 @@ def abstaende(x,y,z):
     maxi = max(erster_abstand_punkte,zweiter_abstand_punkte,dritter_abstand_punkte)
     return maxi
 
-num_samples = 40
-
+# Berechnung der Punkte in dem Kreisring
 theta = np.linspace(0, 2*np.pi, num_samples)
-a, b = 5 * np.cos(theta), 5 * np.sin(theta)
+a, b = 1 * np.cos(theta), 1 * np.sin(theta)
 
+anzahl = num_samples - teilkreis
 
-x = np.zeros([num_samples,anzahl_punkte_pro_kreis])
-y = np.zeros([num_samples,anzahl_punkte_pro_kreis])
+x = np.zeros([anzahl,anzahl_punkte_pro_kreis])
+y = np.zeros([anzahl,anzahl_punkte_pro_kreis])
 
-anzahl = num_samples - 0
-
+# Berechnung der Punkte
 for i in range(anzahl):
-    x_tmp , y_tmp =punkte(a[i],b[i],1,anzahl_punkte_pro_kreis)
+    x_tmp , y_tmp =punkte(a[i],b[i],radius,anzahl_punkte_pro_kreis)
     x[i] = x_tmp
     y[i] = y_tmp
 
@@ -87,16 +89,15 @@ a = np.vstack((x.T,y.T)).T
 points = a
 
 #test = naiveVR(points, epsilon)
-
 #plt.plot(test[:,1,0],test[:,1,1])
-plt.plot(a[:,0],a[:,1],'.')
+plt.plot(points[:,0],points[:,1],'.')
 
 #from mogutda import SimplicialComplex
 #SimplicialComplex.eulerCharacteristic()
 
 
 # Distanzmatrix
-df = pd.DataFrame(a)    
+df = pd.DataFrame(points)    
 t = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index).to_numpy()
 
 # Epsilon Abstaende
@@ -117,12 +118,10 @@ pb = asdf[0:i]
 print()
 print('==============================')
 print()
+print('Epsilon = ',epsilon)
+print()
 gjk = np.vstack((np.arange(0,np.size(pb)).T,pb.T)).T
-print(tabulate(gjk,headers=['Epsilon-Ball', 'Anzahl']))
-
-#import networkx as nx
-#G = G=nx.from_numpy_matrix(t)
-#nx.draw(G)
+print(tabulate(gjk,headers=['Epsilon-Ball mit x Punkten', 'Anzahl']))
 
 
 
@@ -136,6 +135,8 @@ print(tabulate(gjk,headers=['Epsilon-Ball', 'Anzahl']))
 
 
 
+
+######### alles weitere ist erstmal egal ##########
 
 
 
