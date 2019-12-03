@@ -1,5 +1,6 @@
 # Euler Charakteristik / Cech Complex
 
+##### Imports #####
 import numpy
 import numpy as np 
 import pylab as plt 
@@ -8,11 +9,14 @@ import math
 from scipy import ndimage
 from scipy.spatial import distance_matrix
 import pandas as pd
-from scipy.spatial import distance_matrix
-#from mogutda import SimplicialComplex
+from tabulate import tabulate
 plt.close()
 
+##### Eingabe #####
+anzahl_punkte_pro_kreis = 4
+epsilon = 2
 
+##### Funktionen #####
 def punkte(xi,yi,radius,samples):    
     num_samples = samples
     theta = np.linspace(0, 2*np.pi, num_samples)
@@ -37,7 +41,7 @@ num_samples = 40
 theta = np.linspace(0, 2*np.pi, num_samples)
 a, b = 5 * np.cos(theta), 5 * np.sin(theta)
 
-anzahl_punkte_pro_kreis = 4
+
 x = np.zeros([num_samples,anzahl_punkte_pro_kreis])
 y = np.zeros([num_samples,anzahl_punkte_pro_kreis])
 
@@ -47,7 +51,9 @@ for i in range(anzahl):
     x_tmp , y_tmp =punkte(a[i],b[i],1,anzahl_punkte_pro_kreis)
     x[i] = x_tmp
     y[i] = y_tmp
-    
+
+###########################################################################################################
+# Das Folgende ist für das Simplizialkomplex
 def naiveVR(points, epsilon):
    points = [numpy.array(x) for x in points]   
    vrComplex = [(x,y) for (x,y) in combinations(points, 2) if numpy.linalg.norm(x - y) < 2*epsilon]
@@ -72,29 +78,47 @@ def combinations(iterable, r):
         for j in range(i+1, r):
             indices[j] = indices[j-1] + 1
         yield tuple(pool[i] for i in indices)
+############################################################################################################
         
 x = np.reshape(x,np.shape(x)[0]*np.shape(x)[1])
 y = np.reshape(y,np.shape(y)[0]*np.shape(y)[1])
 
 a = np.vstack((x.T,y.T)).T
 points = a
-epsilon = .2
+
 #test = naiveVR(points, epsilon)
-#
+
 #plt.plot(test[:,1,0],test[:,1,1])
 plt.plot(a[:,0],a[:,1],'.')
+
+#from mogutda import SimplicialComplex
 #SimplicialComplex.eulerCharacteristic()
 
 
-
+# Distanzmatrix
 df = pd.DataFrame(a)    
 t = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index).to_numpy()
+
+# Epsilon Abstaende
 k = np.where(t<epsilon,t,0)
+
+# Punkte pro Epsilonball
 kut = tri_upper_no_diag = np.triu(k,1)
 kut[np.where(kut!=0)] = 1
-annzahl_pe = sum(kut.T[:])+1
+anzahl_pe = sum(kut.T[:])+1
+asdf = np.zeros(np.shape(k)[0]+1)
+for i in range(np.shape(k)[0]):
+    asdf[i+1] = np.count_nonzero(anzahl_pe == i+1)
+    if np.count_nonzero(anzahl_pe == i+1) == 0:
+        break
+pb = asdf[0:i]
 
-
+# Plot für Epsilonbaelle
+print()
+print('==============================')
+print()
+gjk = np.vstack((np.arange(0,np.size(pb)).T,pb.T)).T
+print(tabulate(gjk,headers=['Epsilon-Ball', 'Anzahl']))
 
 #import networkx as nx
 #G = G=nx.from_numpy_matrix(t)
