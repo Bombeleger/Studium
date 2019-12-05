@@ -9,22 +9,25 @@ import math
 from scipy import ndimage
 from scipy.spatial import distance_matrix
 import pandas as pd
-from tabulate import tabulate
+from tabulate import tabulate # pip install tabulate
 plt.close()
 
 ##### Eingabe #####
-num_samples = 40
-anzahl_punkte_pro_kreis = 4
-epsilon = .1
-radius = .1
+num_samples = 50
+anzahl_punkte_pro_kreis = 5
+epsilon = 0.15
+radius = .2
 teilkreis = 0
+kreis_plotten = 0
+punkte_plotten = 1
+plotten_dreiecke = 0
 
 ##### Funktionen #####
 def punkte(xi,yi,radius,samples):    
     num_samples = samples
     theta = np.linspace(0, 2*np.pi, num_samples)
     
-    r = radius*np.random.rand((num_samples))
+    r = radius*np.random.rand(num_samples)
     x, y = r * np.cos(theta)+xi, r * np.sin(theta)+yi
     return x,y
 
@@ -85,12 +88,15 @@ def combinations(iterable, r):
 x = np.reshape(x,np.shape(x)[0]*np.shape(x)[1])
 y = np.reshape(y,np.shape(y)[0]*np.shape(y)[1])
 
-a = np.vstack((x.T,y.T)).T
-points = a
+points = np.vstack((x.T,y.T)).T
 
 #test = naiveVR(points, epsilon)
 #plt.plot(test[:,1,0],test[:,1,1])
-plt.plot(points[:,0],points[:,1],'.')
+if kreis_plotten:
+    plt.plot(a,b)
+
+if punkte_plotten:
+    plt.plot(points[:,0],points[:,1],'.')
 
 #from mogutda import SimplicialComplex
 #SimplicialComplex.eulerCharacteristic()
@@ -124,8 +130,12 @@ gjk = np.vstack((np.arange(0,np.size(pb)).T,pb.T)).T
 print(tabulate(gjk,headers=['Epsilon-Ball mit x Punkten', 'Anzahl']))
 
 
-
-
+if plotten_dreiecke:
+    for i in range(num_samples*anzahl_punkte_pro_kreis):
+        einser = np.where(kut[i]==1)
+        punkte_einser = points[einser]
+        ak = np.zeros(np.shape(punkte_einser))+points[i]
+        plt.plot([ak[:,0],punkte_einser[:,0]],[ak[:,1],punkte_einser[:,1]],'r-')
 
 
 
