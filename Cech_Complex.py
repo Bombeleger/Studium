@@ -3,33 +3,46 @@
 ##### Imports #####
 import numpy
 import numpy as np 
-import pylab as plt 
+import pylab as plt
+from scipy.spatial import Voronoi
 from scipy.spatial import Delaunay
 import math 
+import random
 from scipy import ndimage
 from scipy.spatial import distance_matrix
 import pandas as pd
 from tabulate import tabulate # pip install tabulate
+from random_geometry_points.sphere import Sphere
+from random_geometry_points.circle2d import Circle2D # pip install random-geometry-points
+import gudhi
 plt.close()
 
 ##### Eingabe #####
-num_samples = 50
-anzahl_punkte_pro_kreis = 5
-epsilon = 0.15
-radius = .2
-teilkreis = 0
-kreis_plotten = 0
+num_samples = 500
+
+epsilon = 0.2
+aussen = 1
+innen = 0.7
+
+kreis_plotten = 1
 punkte_plotten = 1
 plotten_dreiecke = 0
 
+np.random.seed(250)
+
 ##### Funktionen #####
-def punkte(xi,yi,radius,samples):    
+
+def punkte(xi,yi,zi,radius,samples):    
+#    circle = Circle2D(xi, yi, radius)
+#    X = np.asarray(circle.create_random_points(samples))
+#    circle = Sphere(xi, yi, zi, radius)
+#    X = np.asarray(circle.create_random_points(samples))
     num_samples = samples
     theta = np.linspace(0, 2*np.pi, num_samples)
     
     r = radius*np.random.rand(num_samples)
     x, y = r * np.cos(theta)+xi, r * np.sin(theta)+yi
-    return x,y
+    return x, y #X[:,0], X[:,1], X[:,2]
 
 def dist(x,y):  
      dist = math.sqrt((x[0] - y[0])**2 + (x[1] - y[1])**2)  
@@ -41,21 +54,6 @@ def abstaende(x,y,z):
     dritter_abstand_punkte = dist(x,z)
     maxi = max(erster_abstand_punkte,zweiter_abstand_punkte,dritter_abstand_punkte)
     return maxi
-
-# Berechnung der Punkte in dem Kreisring
-theta = np.linspace(0, 2*np.pi, num_samples)
-a, b = 1 * np.cos(theta), 1 * np.sin(theta)
-
-anzahl = num_samples - teilkreis
-
-x = np.zeros([anzahl,anzahl_punkte_pro_kreis])
-y = np.zeros([anzahl,anzahl_punkte_pro_kreis])
-
-# Berechnung der Punkte
-for i in range(anzahl):
-    x_tmp , y_tmp =punkte(a[i],b[i],radius,anzahl_punkte_pro_kreis)
-    x[i] = x_tmp
-    y[i] = y_tmp
 
 ###########################################################################################################
 # Das Folgende ist für das Simplizialkomplex
@@ -84,37 +82,36 @@ def combinations(iterable, r):
             indices[j] = indices[j-1] + 1
         yield tuple(pool[i] for i in indices)
 ############################################################################################################
-        
-x = np.reshape(x,np.shape(x)[0]*np.shape(x)[1])
-y = np.reshape(y,np.shape(y)[0]*np.shape(y)[1])
 
-points = np.vstack((x.T,y.T)).T
+phi = numpy.random.uniform(0, 2*np.pi, num_samples)
+r = numpy.random.uniform(innen, aussen, num_samples)
 
-#test = naiveVR(points, epsilon)
-#plt.plot(test[:,1,0],test[:,1,1])
+x = r * numpy.cos(phi)
+y = r * numpy.sin(phi)
+
+points = np.vstack((x,y)).T
+
 if kreis_plotten:
-    plt.plot(a,b)
+    theta = np.linspace(0, 2*np.pi, num_samples)
+    a, b ,z = (innen + (aussen-innen)/2) * np.cos(theta), (innen + (aussen-innen)/2)  * np.sin(theta), 0
+    plt.plot(a,b,'r')
 
 if punkte_plotten:
-    plt.plot(points[:,0],points[:,1],'.')
-
-#from mogutda import SimplicialComplex
-#SimplicialComplex.eulerCharacteristic()
-
+    plt.plot(points[:,0],points[:,1],'bo')
 
 # Distanzmatrix
 df = pd.DataFrame(points)    
-t = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index).to_numpy()
+DistanzMatrix = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index).to_numpy()
 
 # Epsilon Abstaende
-k = np.where(t<epsilon,t,0)
+EpsilonMatrix = np.where(DistanzMatrix<=epsilon,DistanzMatrix,0)
 
 # Punkte pro Epsilonball
-kut = tri_upper_no_diag = np.triu(k,1)
-kut[np.where(kut!=0)] = 1
-anzahl_pe = sum(kut.T[:])+1
-asdf = np.zeros(np.shape(k)[0]+1)
-for i in range(np.shape(k)[0]):
+EpsilonTri = np.triu(EpsilonMatrix,1)
+EpsilonTri[np.where(EpsilonTri!=0)] = 1
+anzahl_pe = sum(EpsilonTri.T[:])+1
+asdf = np.zeros(np.shape(EpsilonMatrix)[0]+1)
+for i in range(np.shape(EpsilonMatrix)[0]):
     asdf[i+1] = np.count_nonzero(anzahl_pe == i+1)
     if np.count_nonzero(anzahl_pe == i+1) == 0:
         break
@@ -129,13 +126,32 @@ print()
 gjk = np.vstack((np.arange(0,np.size(pb)).T,pb.T)).T
 print(tabulate(gjk,headers=['Epsilon-Ball mit x Punkten', 'Anzahl']))
 
-
 if plotten_dreiecke:
-    for i in range(num_samples*anzahl_punkte_pro_kreis):
-        einser = np.where(kut[i]==1)
+    for i in range(num_samples):
+        einser = np.where(EpsilonTri[i]==1)
         punkte_einser = points[einser]
         ak = np.zeros(np.shape(punkte_einser))+points[i]
         plt.plot([ak[:,0],punkte_einser[:,0]],[ak[:,1],punkte_einser[:,1]],'r-')
+
+
+
+ecken = 0
+EpsilonMatrix[np.where(EpsilonMatrix!=0)] = 1
+for i in range(num_samples):
+    if sum(EpsilonMatrix[i]) >=2:
+        ecken += 1
+kanten = sum(sum(EpsilonTri))
+
+
+
+
+
+
+
+
+
+
+
 
 
 
